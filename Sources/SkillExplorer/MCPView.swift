@@ -96,29 +96,29 @@ struct MCPView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("MCP-Server").font(.title2.bold())
+                Text("MCP Servers").font(.title2.bold())
                 Text(entries.count, format: .number).foregroundStyle(.secondary)
                 Spacer()
-                Button("Projekt auswählen", systemImage: "folder") {
+                Button("Select Project", systemImage: "folder") {
                     let panel = NSOpenPanel()
                     panel.canChooseDirectories = true
                     panel.canChooseFiles = false
                     if panel.runModal() == .OK { project = panel.url; reload() }
                 }
-                Button("Aktualisieren", systemImage: "arrow.clockwise", action: reload)
+                Button("Refresh", systemImage: "arrow.clockwise", action: reload)
             }
-            Text("Lokale Konfigurationen. Live-Verbindungen und Kontointegrationen werden hier nicht geprüft.")
+            Text("Local configurations only. Live connections and account integrations are not checked.")
                 .font(.callout).foregroundStyle(.secondary)
             if let project {
                 HStack {
                     Text(project.path).lineLimit(1).truncationMode(.middle)
-                    Button("Projektfilter entfernen", systemImage: "xmark.circle") {
+                    Button("Clear Project", systemImage: "xmark.circle") {
                         self.project = nil
                         reload()
                     }.labelStyle(.iconOnly)
                 }.font(.caption).foregroundStyle(.secondary)
             }
-            TextField("Server oder Agent suchen", text: $query).textFieldStyle(.roundedBorder)
+            TextField("Search servers or agents", text: $query).textFieldStyle(.roundedBorder)
             List {
                 ForEach(MCPInventory.agents, id: \.self) { agent in
                     let matches = entries.filter {
@@ -128,7 +128,7 @@ struct MCPView: View {
                     if query.isEmpty || !matches.isEmpty {
                         Section(agent) {
                             if matches.isEmpty {
-                                Text("Keine lokalen Einträge gefunden").foregroundStyle(.secondary)
+                                Text("No local entries found").foregroundStyle(.secondary)
                             }
                             ForEach(matches) { server in
                                 HStack {
@@ -138,7 +138,7 @@ struct MCPView: View {
                                             .font(.caption).foregroundStyle(.secondary)
                                     }
                                     Spacer()
-                                    Text(server.enabled ? "Konfiguriert" : "Deaktiviert")
+                                    Text(server.enabled ? "Configured" : "Disabled")
                                         .font(.caption).foregroundStyle(.secondary)
                                 }.padding(.vertical, 4)
                             }

@@ -43,7 +43,7 @@ enum SkillCatalog {
         let paths = ["\(home)/.volta/bin", "/opt/homebrew/bin", "/usr/local/bin", "/usr/bin", "/bin"]
         guard let npx = paths.map({ $0 + "/npx" }).first(where: fm.isExecutableFile(atPath:)) else {
             throw CocoaError(.executableNotLoadable, userInfo: [
-                NSLocalizedDescriptionKey: "npx wurde nicht gefunden. Für die Installation ist Node.js erforderlich."
+                NSLocalizedDescriptionKey: "The app could not find npx. Install Node.js to install skills."
             ])
         }
         let log = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString)
@@ -73,7 +73,7 @@ enum SkillCatalog {
         }
         guard process.terminationStatus == 0, installed else {
             throw CocoaError(.fileWriteUnknown, userInfo: [
-                NSLocalizedDescriptionKey: message.isEmpty ? "Die Installation ist fehlgeschlagen." : String(message.suffix(1600))
+                NSLocalizedDescriptionKey: message.isEmpty ? "Installation failed." : String(message.suffix(1600))
             ])
         }
         return message
@@ -98,16 +98,16 @@ struct StoreView: View {
                 Link("skills.sh", destination: URL(string: "https://www.skills.sh/")!)
             }
             HStack {
-                TextField("skills.sh durchsuchen", text: $query).textFieldStyle(.roundedBorder)
+                TextField("Search skills.sh", text: $query).textFieldStyle(.roundedBorder)
                     .onSubmit(search)
-                Button("Suchen", systemImage: "magnifyingglass", action: search)
+                Button("Search", systemImage: "magnifyingglass", action: search)
                     .disabled(busy || query.trimmingCharacters(in: .whitespacesAndNewlines).count < 2)
             }
             if busy { ProgressView().controlSize(.small) }
             if let status { Text(status).font(.callout).textSelection(.enabled) }
             if results.isEmpty && !busy && status == nil {
-                ContentUnavailableView(searched ? "Keine Treffer" : "Skills entdecken", systemImage: "magnifyingglass",
-                                       description: Text(searched ? "Versuche einen anderen Suchbegriff." : "Suche nach einem Skill oder einer Aufgabe."))
+                ContentUnavailableView(searched ? "No results" : "Discover skills", systemImage: "magnifyingglass",
+                                       description: Text(searched ? "Try a different search term." : "Search for a skill or task."))
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 ScrollView {
@@ -120,12 +120,12 @@ struct StoreView: View {
                                 }
                                 Spacer()
                                 Text(skill.installs, format: .number).foregroundStyle(.secondary)
-                                    .help("Installationen laut skills.sh")
+                                    .help("Installs reported by skills.sh")
                                 if installedNames.contains(skill.skillId.lowercased()) {
-                                    Text("Name lokal vorhanden").foregroundStyle(.secondary)
+                                    Text("Name exists locally").foregroundStyle(.secondary)
                                 } else {
-                                    Button("Installieren") { pending = skill }
-                                        .accessibilityLabel("\(skill.name) von \(skill.source) installieren")
+                                    Button("Install") { pending = skill }
+                                        .accessibilityLabel("Install \(skill.name) from \(skill.source)")
                                         .disabled(busy || !skill.canInstall)
                                 }
                             }.padding(.vertical, 8)
@@ -138,13 +138,13 @@ struct StoreView: View {
         .padding(24)
         .frame(maxWidth: 980)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .alert("Skill global installieren?", isPresented: Binding(
+            .alert("Install skill globally?", isPresented: Binding(
                 get: { pending != nil }, set: { if !$0 { pending = nil } }
             ), presenting: pending) { skill in
-                Button("Installieren") { install(skill) }
-                Button("Abbrechen", role: .cancel) {}
+                Button("Install") { install(skill) }
+                Button("Cancel", role: .cancel) {}
             } message: { skill in
-                Text("\(skill.name) aus \(skill.source) wird für Codex, Claude Code und Cursor installiert. OMP kann die gemeinsame Kopie über seinen Benutzerordner finden.")
+                Text("Install \(skill.name) from \(skill.source) for Codex, Claude Code, and Cursor. OMP can find the shared copy in your home directory.")
             }
     }
 
@@ -156,7 +156,7 @@ struct StoreView: View {
         Task {
             defer { busy = false; searched = true }
             do { results = try await SkillCatalog.search(term) }
-            catch { status = "Suche fehlgeschlagen: \(error.localizedDescription)" }
+            catch { status = "Search failed: \(error.localizedDescription)" }
         }
     }
 
@@ -169,7 +169,7 @@ struct StoreView: View {
             do {
                 _ = try await Task.detached { try SkillCatalog.install(skill) }.value
                 onInstall()
-                status = "\(skill.name) wurde installiert."
+                status = "\(skill.name) was installed."
             } catch {
                 onInstall()
                 status = error.localizedDescription
@@ -187,13 +187,13 @@ struct CatalogMatchView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             if let matches {
-                Text(matches.isEmpty ? "Kein gleichnamiger Treffer auf skills.sh" : "Gleichnamige Treffer auf skills.sh")
+                Text(matches.isEmpty ? "No matching name on skills.sh" : "Matching names on skills.sh")
                     .font(.caption).foregroundStyle(.secondary)
                 ForEach(matches) { skill in
                     Link(skill.source, destination: skill.webURL).font(.caption)
                 }
             } else {
-                Button(failed ? "Katalog erneut prüfen" : "Auf skills.sh nachsehen", systemImage: "magnifyingglass") {
+                Button(failed ? "Check the catalog again" : "Check skills.sh", systemImage: "magnifyingglass") {
                     loading = true
                     Task {
                         defer { loading = false }

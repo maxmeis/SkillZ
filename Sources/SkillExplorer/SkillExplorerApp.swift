@@ -153,16 +153,16 @@ struct FileNode: Identifiable {
         let claude = env["CLAUDE_CONFIG_DIR"].flatMap { $0.isEmpty ? nil : $0 } ?? "\(home)/.claude"
         let omp = env["PI_CODING_AGENT_DIR"].flatMap { $0.isEmpty ? nil : $0 } ?? "\(home)/.omp/agent"
         return [
-            PromptSource(id: "Codex", folders: [codex], guidance: "Erwartet: AGENTS.md oder AGENTS.override.md"),
-            PromptSource(id: "Claude", folders: [claude], guidance: "Erwartet: CLAUDE.md",
+            PromptSource(id: "Codex", folders: [codex], guidance: "Expected: AGENTS.md or AGENTS.override.md"),
+            PromptSource(id: "Claude", folders: [claude], guidance: "Expected: CLAUDE.md",
                          documentation: URL(string: "https://code.claude.com/docs/en/memory")),
             PromptSource(id: "Cursor", folders: ["\(home)/.cursor"],
-                         guidance: "Globale User Rules findest du in Cursor Settings → Rules.",
+                         guidance: "Find global User Rules in Cursor Settings → Rules.",
                          documentation: URL(string: "https://cursor.com/docs/rules#user-rules")),
             PromptSource(id: "OMP", folders: [omp, "\(home)/.omp"],
-                         guidance: "Erwartet: AGENTS.md, RULES.md, SYSTEM.md oder APPEND_SYSTEM.md",
+                         guidance: "Expected: AGENTS.md, RULES.md, SYSTEM.md, or APPEND_SYSTEM.md",
                          documentation: URL(string: "https://github.com/can1357/oh-my-pi/blob/main/docs/context-files.md")),
-            PromptSource(id: "Gemeinsam", folders: [home, "\(home)/.agents"], guidance: "Gemeinsame lokale Anweisungen")
+            PromptSource(id: "Shared", folders: [home, "\(home)/.agents"], guidance: "Shared local instructions")
         ]
     }
 
@@ -194,11 +194,11 @@ struct FileNode: Identifiable {
     @Published private var skillsLockUnreadable = false
 
     func skillsShStatus(_ skill: SkillCard) -> String {
-        if skillsLockUnreadable { return "skills.sh · Installationsdatei nicht lesbar" }
-        guard let skillsLock else { return "skills.sh · Keine lokale Installationsdatei" }
+        if skillsLockUnreadable { return "skills.sh · Could not read the install record" }
+        guard let skillsLock else { return "skills.sh · No local install record file" }
         let record = skill.copies.lazy.compactMap { skillsLock.skills[$0.name] }.first
-        return record.map { "skills.sh · Lokaler Eintrag: \($0.source)" }
-            ?? "skills.sh · Kein lokaler Eintrag"
+        return record.map { "skills.sh · Local record: \($0.source)" }
+            ?? "skills.sh · No local record"
     }
 
     func matchesFilters(_ entry: Entry) -> Bool {
@@ -338,7 +338,7 @@ struct FileNode: Identifiable {
             guard process.terminationStatus == 0 else { throw CocoaError(.fileWriteUnknown) }
             try fm.trashItem(at: archive, resultingItemURL: nil)
         } catch {
-            self.error = "Das ZIP konnte nicht in den Papierkorb gelegt werden. Die Skill-Ordner wurden nicht entfernt. \(error.localizedDescription)"
+            self.error = "The app could not move the ZIP archive to the Trash. The skill folders are still in place. \(error.localizedDescription)"
             return
         }
         do {
@@ -346,7 +346,7 @@ struct FileNode: Identifiable {
                 try fm.trashItem(at: folder, resultingItemURL: nil)
             }
         } catch {
-            self.error = "Ein Ordner konnte nicht entfernt werden. Das vollständige ZIP liegt im Papierkorb. \(error.localizedDescription)"
+            self.error = "The app could not remove a folder. The full ZIP archive is in the Trash. \(error.localizedDescription)"
         }
         closeDetail()
         scan()
@@ -383,7 +383,7 @@ struct FileNode: Identifiable {
 struct ContentView: View {
     @StateObject var library = Library()
     private enum SectionTab: String, CaseIterable, Identifiable {
-        case masterprompts = "Masterprompts"
+        case masterprompts = "Master Prompts"
         case skills = "Skills"
         case store = "Store"
         case mcp = "MCP"
@@ -419,15 +419,15 @@ struct ContentView: View {
                 }.id(entry.id)
             }
         } else {
-            ContentUnavailableView("Keine Textvorschau", systemImage: "doc",
-                                   description: Text("Öffne die Datei in der Standard-App."))
+            ContentUnavailableView("No text preview", systemImage: "doc",
+                                   description: Text("Open the file in its default app."))
         }
     }
     private var masterprompts: some View {
         HStack(alignment: .top, spacing: 0) {
             VStack(alignment: .leading, spacing: 10) {
-                Text("Globale Anweisungen").font(.headline).padding(.top, 12)
-                TextField("Name, Agent oder Pfad suchen", text: $library.query).textFieldStyle(.roundedBorder)
+                Text("Global Instructions").font(.headline).padding(.top, 12)
+                TextField("Search by name, agent, or path", text: $library.query).textFieldStyle(.roundedBorder)
                 List {
                     ForEach(library.promptSources) { source in
                         let entries = library.globalInstructions(for: source)
@@ -449,22 +449,22 @@ struct ContentView: View {
                                     }.buttonStyle(.plain)
                                         .listRowBackground(library.selected == prompt ? Color.accentColor.opacity(0.14) : Color.clear)
                                 }
-                                if entries.isEmpty && source.id != "Gemeinsam" {
+                                if entries.isEmpty && source.id != "Shared" {
                                     VStack(alignment: .leading, spacing: 4) {
-                                        Text("Keine lokale Datei gefunden").font(.callout)
+                                        Text("No local file found").font(.callout)
                                         Text(source.guidance).font(.caption).foregroundStyle(.secondary)
                                         if source.id != "Cursor", let folder = source.folders.first {
                                             Text((folder as NSString).abbreviatingWithTildeInPath)
                                                 .font(.caption.monospaced()).foregroundStyle(.secondary)
                                         }
                                         if let docs = source.documentation {
-                                            Link("Dokumentation", destination: docs).font(.caption)
+                                            Link("Documentation", destination: docs).font(.caption)
                                         }
                                     }.padding(.vertical, 4)
                                 }
                             } header: {
                                 Label { Text(source.id) } icon: {
-                                    if source.id == "Gemeinsam" { Image(systemName: "folder") }
+                                    if source.id == "Shared" { Image(systemName: "folder") }
                                     else { agentIcon(source.id).resizable().scaledToFit().frame(width: 17, height: 17) }
                                 }
                             }
@@ -487,15 +487,15 @@ struct ContentView: View {
                     HStack {
                         Text(entry.name).font(.headline)
                         Spacer()
-                        Button("In Standard-App öffnen", systemImage: "arrow.up.right.square") {
-                            if !NSWorkspace.shared.open(entry.url) { library.error = "macOS konnte die Datei nicht öffnen." }
+                        Button("Open in Default App", systemImage: "arrow.up.right.square") {
+                            if !NSWorkspace.shared.open(entry.url) { library.error = "macOS could not open the file." }
                         }
                     }
                     Divider()
                     fileContent(entry)
                 }.padding(12).frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                ContentUnavailableView("Anweisung auswählen", systemImage: "doc.text")
+                ContentUnavailableView("Select an instruction file", systemImage: "doc.text")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
@@ -519,7 +519,7 @@ struct ContentView: View {
 
     private func agentBadges(_ agents: [String]) -> some View {
         HStack(spacing: 4) {
-            ForEach(agents.isEmpty ? ["Unbekannt"] : agents, id: \.self) { agent in
+            ForEach(agents.isEmpty ? ["Unknown"] : agents, id: \.self) { agent in
                 Label { Text(agent) } icon: { agentIcon(agent).resizable().scaledToFit().frame(width: 16, height: 16) }
                     .font(.caption.bold())
                     .padding(.horizontal, 7).padding(.vertical, 4)
@@ -536,10 +536,10 @@ struct ContentView: View {
     private var sectionHeader: some View {
         HStack {
             Spacer()
-            Picker("Bereich", selection: Binding(get: { section }, set: { target in
+            Picker("Section", selection: Binding(get: { section }, set: { target in
                 switchSection(to: target)
             })) {
-                Text("Masterprompts").tag(SectionTab.masterprompts)
+                Text("Master Prompts").tag(SectionTab.masterprompts)
                 Text("Skills").tag(SectionTab.skills)
                 Text("Store").tag(SectionTab.store)
                 Text("MCP").tag(SectionTab.mcp)
@@ -559,10 +559,10 @@ struct ContentView: View {
                 Text(library.cards.count, format: .number)
                     .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
             }.padding(.horizontal, 12).padding(.top, 12)
-            TextField("Skills suchen", text: $library.query)
+            TextField("Search skills", text: $library.query)
                 .textFieldStyle(.roundedBorder).padding(.horizontal, 12)
             Picker("Agent", selection: $library.agentFilter) {
-                Text("Alle Agenten").tag(nil as String?)
+                Text("All Agents").tag(nil as String?)
                 ForEach(library.agentNames, id: \.self) { agent in
                     Label { Text(agent) } icon: { agentIcon(agent).resizable().scaledToFit().frame(width: 16, height: 16) }
                         .tag(Optional(agent))
@@ -599,16 +599,16 @@ struct ContentView: View {
         HStack {
             Text(entry.url.lastPathComponent).font(.headline).lineLimit(1)
             Spacer()
-            Button("In Standard-App öffnen", systemImage: "arrow.up.right.square") {
+            Button("Open in Default App", systemImage: "arrow.up.right.square") {
                 if !NSWorkspace.shared.open(entry.url) {
-                    library.error = "macOS konnte die Datei nicht öffnen."
+                    library.error = "macOS could not open the file."
                 }
             }.keyboardShortcut(.return, modifiers: .command)
-            Button("Im Finder", systemImage: "folder") {
+            Button("Show in Finder", systemImage: "folder") {
                 NSWorkspace.shared.activateFileViewerSelecting([entry.url])
             }
             .labelStyle(.iconOnly)
-            .help("Im Finder zeigen")
+            .help("Show in Finder")
         }.padding(12)
             Divider()
             fileContent(entry)
@@ -618,10 +618,10 @@ struct ContentView: View {
     private func fileNavigator(_ skill: SkillCard, entry: Entry) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Label("Dateien", systemImage: "folder").font(.headline)
+                Label("Files", systemImage: "folder").font(.headline)
                 Spacer()
                 Menu {
-                    Button("Skill entfernen", systemImage: "trash", role: .destructive) {
+                    Button("Remove Skill", systemImage: "trash", role: .destructive) {
                         showRemoveSkill = true
                     }
                 } label: {
@@ -629,9 +629,9 @@ struct ContentView: View {
                 }
                 .menuStyle(.borderlessButton)
                 .fixedSize()
-                .accessibilityLabel("Skill-Aktionen")
+                .accessibilityLabel("Skill Actions")
             }
-            Text(skill.copies.count == 1 ? "Speicherort" : "\(skill.copies.count) Speicherorte")
+            Text(skill.copies.count == 1 ? "Location" : "\(skill.copies.count) Locations")
                 .font(.subheadline.bold())
             ForEach(skill.copies) { copy in
                 let folder = copy.url.deletingLastPathComponent()
@@ -663,11 +663,11 @@ struct ContentView: View {
             }
             if skill.copies.count > 1 {
                 let targets = Set(skill.copies.map { ($0.linkTarget ?? $0.url).path })
-                Text(targets.count == 1 ? "Verknüpft · dieselbe Datei" : "Unterschiedliche Dateien")
+                Text(targets.count == 1 ? "Linked to the same file" : "Separate files")
                     .font(.caption).foregroundStyle(.secondary)
             }
             agentBadges(skill.agents)
-                .help("Mögliche Agenten für alle Kopien dieses Skills")
+                .help("Agents that can find this skill by its location")
             Text(library.skillsShStatus(skill)).font(.caption).foregroundStyle(.secondary)
             CatalogMatchView(name: skill.name).id(skill.id)
             Divider()
@@ -700,7 +700,7 @@ struct ContentView: View {
                 skillPreview(entry)
                 if let skill = library.activeSkill { fileNavigator(skill, entry: entry) }
             } else {
-                ContentUnavailableView("Kein Skill ausgewählt", systemImage: "folder")
+                ContentUnavailableView("No skill selected", systemImage: "folder")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
@@ -728,22 +728,22 @@ struct ContentView: View {
             }
         }
         .toolbar {
-            Button("Neu suchen", systemImage: "arrow.clockwise") { library.scan(); selectFirstSkill() }
+            Button("Refresh", systemImage: "arrow.clockwise") { library.scan(); selectFirstSkill() }
         }
         .onAppear { library.scan(); selectFirstSkill() }
         .onChange(of: library.selected?.id) { _, _ in selectFirstSkill() }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             if let entry = library.selected { library.open(entry) }
         }
-        .alert("Skill in den Papierkorb legen?", isPresented: $showRemoveSkill, presenting: library.activeSkill) { skill in
-            Button("In den Papierkorb", role: .destructive) { library.trashSkill(skill) }
-            Button("Abbrechen", role: .cancel) {}
+        .alert("Move skill to the Trash?", isPresented: $showRemoveSkill, presenting: library.activeSkill) { skill in
+            Button("Move to Trash", role: .destructive) { library.trashSkill(skill) }
+            Button("Cancel", role: .cancel) {}
         } message: { skill in
-            Text("Das ZIP und diese Ordner kommen in den Papierkorb:\n\n" + skill.copies.map {
+            Text("The app will move the ZIP archive and these folders to the Trash:\n\n" + skill.copies.map {
                 $0.url.deletingLastPathComponent().path
             }.joined(separator: "\n"))
         }
-        .alert("Datei konnte nicht verarbeitet werden", isPresented: Binding(get: { library.error != nil }, set: { if !$0 { library.error = nil } })) { Button("OK") { library.error = nil } } message: { Text(library.error ?? "") }
+        .alert("Could not process the file", isPresented: Binding(get: { library.error != nil }, set: { if !$0 { library.error = nil } })) { Button("OK") { library.error = nil } } message: { Text(library.error ?? "") }
         .frame(minWidth: 960, minHeight: 640)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
